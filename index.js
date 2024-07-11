@@ -13,6 +13,7 @@ const app = express();
 app.use(methodOverride('_method'))
 app.use(cors());
 
+const authRoutes = require('./routes/auth-route')
 const userRoutes = require('./routes/user-route')
 
 mongoose
@@ -20,6 +21,7 @@ mongoose
     .then((res) => console.log('Connected'))
     .catch((error) => console.log(error))
 
+app.use("/api/auth", authRoutes)
 app.use("/api", userRoutes)
 
 app.listen(PORT, (error) => {
