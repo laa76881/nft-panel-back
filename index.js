@@ -10,6 +10,7 @@ const PORT = process.env.PORT
 const db = `mongodb+srv://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASS}@${process.env.MONGO_URL}`
 
 const app = express();
+app.use(express.urlencoded({ extended: false }));
 app.use(methodOverride('_method'))
 app.use(cors());
 
