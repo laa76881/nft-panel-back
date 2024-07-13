@@ -10,6 +10,7 @@ const handleError = ((res, error, status) => {
 
 const logIn = async (req, res) => {
     try {
+        console.log('body', req.body)
         const { email, password } = req.body;
         if (!email || !password) return handleError(res, 'Email and password are required!', 400)
 
