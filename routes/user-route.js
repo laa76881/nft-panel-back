@@ -3,7 +3,7 @@ const router = express.Router()
 
 const {
     getUsers,
-    getUserById
+    getUserById,
 } = require("../controllers/user-controller")
 
 router.get('/users', getUsers)
