@@ -17,26 +17,37 @@ app.use(bodyParser.json()); // application/json - body
 app.use(methodOverride('_method'))
 app.use(cors());
 
+const routesWithoutAuth = ['login', 'sign-up', 'resend-verification', 'me']
+
 //token verify
 app.use((req, res, next) => {
-    console.log('autorization', req.headers.authorization)
-    if (req.headers.authorization) {
-        console.log('1', req.headers.authorization.split(' ')[1])
+    // console.log('request', req.url, routesWithoutAuth.includes(req.url.replace('/api/auth/', '')))
+    console.log('check url match ', req.url.includes(('/api/auth/')), req.url.includes('/api/redirects/'))
+    console.log('app token ', req.headers.authorization)
+
+    // if (routesWithoutAuth.includes(req.url.replace('/api/auth/', '')) || req.url.includes('/api/redirects')) {
+    if (req.url.includes(('/api/auth/')) || req.url.includes('/api/redirects/')) {
+        next()
+    } else if (req.headers.authorization) {
         jwt.verify(
             req.headers.authorization.split(' ')[1],
             process.env.JWT_SECRET,
             (err, payload) => {
-                console.log('token err', err)
                 if (err) {
-                    res.status(500).send('Token expired!')
+                    console.log('token err', err)
+                    res.status(401).send('Token expired!')
                     next('Token expired!')
+                } else {
+                    console.log('token payload', payload)
+                    // console.log('req', req.url)
+                    next()
                 }
-                console.log('token payload', payload)
             }
         );
+    } else {
+        res.status(401).send('Token expired!')
+        next('Token expired!')
     }
-
-    next();
 });
 
 const authRoutes = require('./routes/auth-route')

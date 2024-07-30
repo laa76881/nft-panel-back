@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const nodemailer = require('nodemailer');
 const crypto = require("crypto");
 
+// move to global + add global handler for 404 errors !!!
 const handleError = ((res, error, status) => {
     console.log(error)
     res.status(status ? status : 500).send(error)
@@ -28,7 +29,7 @@ const signUp = async (req, res) => {
             password: newPassword,
             role: 0 // user
         })
-        await sendEmail(req, res, user)
+        await sendEmail(req, user, "verify-email")
         res.status(200).json(
             {
                 success: true,
@@ -52,13 +53,13 @@ const logIn = async (req, res) => {
         console.log('user', user)
         // check password
         const isMatched = await comparePassword(password, user.password);
-        if (!isMatched) return handleError(res, 'Invalid credentials', 400)
+        if (!isMatched) return handleError(res, 'Invalid password!', 400)
 
         if (!user.is_verified)
             return handleError(res, 'Your account has not verified! Please confirm your email!', 400)
 
         const token = await generateToken(user, res);
-        console.log('get info', token)
+        // console.log('get info', token)
     }
     catch (error) {
         console.log(error);
@@ -107,7 +108,7 @@ const resendVerification = async (req, res) => {
     if (!email) console.log('No user email')
     const user = await User.findOne({ email })
     if (user.is_verified) return handleError(res, 'You already verified!')
-    await sendEmail(req, res, user)
+    await sendEmail(req, user, "verify-email")
     res.status(200).json(
         {
             success: true,
@@ -116,7 +117,32 @@ const resendVerification = async (req, res) => {
     )
 }
 
-const sendEmail = async (req, res, user) => { // verifyToken
+const resetPassword = async (req, res) => {
+    const { email } = req.body
+    if (!email) console.log('No user email')
+    const user = await User.findOne({ email })
+    if (!user) return handleError(res, 'User with this email is not exist!')
+    await sendEmail(req, user, "reset-password")
+    res.status(200).json(
+        {
+            success: true,
+            message: `Check your email ${email} to reset your password!`,
+        }
+    )
+}
+
+const emailMessages = {
+    "verify-email": {
+        subject: "Confirm your email",
+        text: "Your new account was created. Please confirm your data via link:"
+    },
+    "reset-password": {
+        subject: "Reset your password",
+        text: "We received a request to reset your account password. Confirm via link:"
+    }
+}
+
+const sendEmail = async (req, user, typeMessage) => {
     // let EXPIRE_TOKEN = 1 * 60 * 60 * 1000
     const verifyToken = await Token.create({
         user_id: user._id,
@@ -125,9 +151,9 @@ const sendEmail = async (req, res, user) => { // verifyToken
     });
     console.log('verifyToken', verifyToken)
 
-    // let email = user.email
-    let email = 'laa76881@gmail.com' // email for tests
-    let transporter = nodemailer.createTransport({
+    // const email = user.email
+    const email = 'laa76881@gmail.com' // email for tests
+    const transporter = nodemailer.createTransport({
         service: 'gmail',
         host: 'smtp.gmail.com',
         port: 465,
@@ -138,14 +164,14 @@ const sendEmail = async (req, res, user) => { // verifyToken
         },
     });
 
-    let link = `http://${req.headers.host}/api/redirects/verify-email/${user._id}/${verifyToken.token}`
+    const link = `http://${req.headers.host}/api/redirects/${typeMessage}/${user._id}/${verifyToken.token}`
 
-    const result = await transporter.sendMail({
+    await transporter.sendMail({
         from: 'support@test.com',
         to: email,
-        subject: 'Confirm your email',
+        subject: emailMessages[typeMessage].subject,
         html:
-            `<h3>Dear user!</h3><p>Your new account was created.Please confirm your data via link:</p><a href="${link}" target="_blank">${link}</a>`,
+            `<h3>Dear user!</h3><p>${emailMessages[typeMessage].text}</p><a href="${link}" target="_blank">${link}</a>`,
         // attachments: [
         //     {
         //         filename: 'greetings.txt',
@@ -155,8 +181,32 @@ const sendEmail = async (req, res, user) => { // verifyToken
     });
 }
 
+const getMe = async (req, res, next) => {
+    console.log('getMe', req.headers.authorization)
+    if (!req.headers.authorization) return res.status(401).send('Token not exist!')
+    jwt.verify(
+        req.headers.authorization.split(' ')[1],
+        process.env.JWT_SECRET,
+        (err, payload) => {
+            if (err) {
+                console.log('getMe err', err)
+                res.status(401).send('Token expired!')
+                next('Token expired!')
+            } else {
+                console.log('getMe payload', payload)
+                User
+                    .findById(payload.id)
+                    .then((user) => res.status(200).json(user))
+                    .catch((error) => handleError(res, error))
+            }
+        }
+    );
+}
+
 module.exports = {
     logIn,
     signUp,
-    resendVerification
+    resendVerification,
+    resetPassword,
+    getMe
 }
