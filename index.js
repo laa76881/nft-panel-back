@@ -1,10 +1,12 @@
 const express = require('express');
-const path = require('path');
+// const path = require('path');
 const mongoose = require('mongoose')
 const methodOverride = require('method-override')
 const cors = require('cors');
 const jwt = require("jsonwebtoken");
 const bodyParser = require('body-parser');
+
+const User = require("./models/user")
 
 require('dotenv').config()
 
@@ -17,30 +19,31 @@ app.use(bodyParser.json()); // application/json - body
 app.use(methodOverride('_method'))
 app.use(cors());
 
-const routesWithoutAuth = ['login', 'sign-up', 'resend-verification', 'me']
+const handleError = ((res, error, status) => {
+    console.log(error)
+    res.status(status ? status : 500).send(error)
+})
 
 //token verify
 app.use((req, res, next) => {
-    // console.log('request', req.url, routesWithoutAuth.includes(req.url.replace('/api/auth/', '')))
-    console.log('check url match ', req.url.includes(('/api/auth/')), req.url.includes('/api/redirects/'))
-    console.log('app token ', req.headers.authorization)
-
-    // if (routesWithoutAuth.includes(req.url.replace('/api/auth/', '')) || req.url.includes('/api/redirects')) {
-    if (req.url.includes(('/api/auth/')) || req.url.includes('/api/redirects/')) {
+    if ((req.url.includes('/api/auth/') && req.url !== '/api/auth/me') || req.url.includes('/api/redirects/')) {
         next()
     } else if (req.headers.authorization) {
         jwt.verify(
             req.headers.authorization.split(' ')[1],
             process.env.JWT_SECRET,
-            (err, payload) => {
+            async (err, payload) => {
                 if (err) {
-                    console.log('token err', err)
                     res.status(401).send('Token expired!')
                     next('Token expired!')
                 } else {
-                    console.log('token payload', payload)
-                    // console.log('req', req.url)
-                    next()
+                    if (req.url === '/api/auth/me') {
+                        const user = await User.findById(payload.id)
+                        if (!user) return handleError(res, 'Error found user')
+                        res.status(200).json(user)
+                    } else {
+                        next()
+                    }
                 }
             }
         );
@@ -56,7 +59,7 @@ const redirectRoutes = require('./routes/redirect-route')
 
 mongoose
     .connect(db)
-    .then((res) => console.log('Connected'))
+    .then(() => console.log('Connected'))
     .catch((error) => console.log(error))
 
 app.use("/api/auth", authRoutes)

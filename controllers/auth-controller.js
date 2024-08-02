@@ -6,95 +6,58 @@ const jwt = require("jsonwebtoken");
 const nodemailer = require('nodemailer');
 const crypto = require("crypto");
 
-// move to global + add global handler for 404 errors !!!
-const handleError = ((res, error, status) => {
-    console.log(error)
-    res.status(status ? status : 500).send(error)
-})
+const {
+    handleError,
+    handleSuccessMessage
+} = require("../utils/serverMessages")
+const { sendMailOptions, sendMailTypes } = require("../utils/sendMail")
+
 
 const signUp = async (req, res) => {
     const { last_name, first_name, email, password, password_confirmation } = req.body
 
     const userExist = await User.findOne({ email })
     if (userExist) return handleError(res, 'This email already exist!', 400)
-
     if (password !== password_confirmation) return handleError(res, 'Passwords not match!', 400)
-    const newPassword = await bcrypt.hash(password, 10)
 
-    try {
-        const user = await User.create({
-            first_name,
-            last_name,
-            email,
-            password: newPassword,
-            role: 0 // user
-        })
-        await sendEmail(req, user, "verify-email")
-        res.status(200).json(
-            {
-                success: true,
-                message: `You have successfully registered. A verification email was sent to ${email}`,
-            }
-        )
-    } catch (error) {
-        console.log('error create ', error)
-        handleError(res, 'Something wrong!')
-    }
+    const newPassword = await bcrypt.hash(password, 10)
+    const user = await User.create({
+        first_name,
+        last_name,
+        email,
+        password: newPassword,
+        role: 0 // user
+    })
+    if (!user) handleError(res, 'Error creating user')
+    await sendEmail(req, user, "verify-email")
+    handleSuccessMessage(res, `You have successfully registered. A verification email was sent to ${email}`)
 }
 
 const logIn = async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        if (!email || !password) return handleError(res, 'Email and password are required!', 400)
+    const { email, password } = req.body;
+    if (!email || !password) return handleError(res, 'Email and password are required!', 400)
+    const user = await User.findOne({ email });
+    if (!user) return handleError(res, 'User with this email is not exist!', 400)
+    const isMatched = await comparePassword(password, user.password);
+    if (!isMatched) return handleError(res, 'Invalid password!', 400)
+    if (!user.is_verified)
+        return handleError(res, 'Your account has not verified! Please confirm your email!', 400)
 
-        // find user by email
-        const user = await User.findOne({ email });
-        if (!user) return handleError(res, 'Email is not exist!', 400)
-        console.log('user', user)
-        // check password
-        const isMatched = await comparePassword(password, user.password);
-        if (!isMatched) return handleError(res, 'Invalid password!', 400)
-
-        if (!user.is_verified)
-            return handleError(res, 'Your account has not verified! Please confirm your email!', 400)
-
-        const token = await generateToken(user, res);
-        // console.log('get info', token)
-    }
-    catch (error) {
-        console.log(error);
-        handleError(res, 'Cannot log in, check your credentials', 400)
-    }
+    await generateToken(user, res);
 }
 
 const generateToken = async (user, res) => {
+    // console.log('gen token', user)
     // const token = await user.jwtGenerateToken();
-    // const token = jwt.sign({ id: this.id }, process.env.JWT_SECRET, {
-    //     expiresIn: 3600
-    // });
-    const EXPIRE_TOKEN = 1 * 60 * 60 * 1000 // 1 hour
-    // const JWT_SECRET = '3v2h-9s3v-e77p-eb5k'
-    const id = user.id
-    console.log('id', id)
-    const token = jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: 3600 // ? why
+    const EXPIRE_TOKEN = 1 * 60 * 60 // 1 hour for tests
+    const token = await jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+        expiresIn: EXPIRE_TOKEN
     });
-    console.log('token', token)
-
-    // let myid = '668d320e84d37b0286f94e8c'
-    // expired 2024-07-18T16:29:27.208Z - after 1h
-
     const options = {
         httpOnly: true,
         expires: new Date(Date.now() + EXPIRE_TOKEN) // process.env.EXPIRE_TOKEN
     };
-    console.log('options', options)
-
-    res
-        .status(200)
-        .cookie('token', token, options)
-        .json({ success: true, token })
-
+    res.status(200).cookie('token', token, options).json({ success: true, token })
     return token
 }
 
@@ -103,18 +66,12 @@ const comparePassword = async (currentPassword, hashPassword) => {
 }
 
 const resendVerification = async (req, res) => {
-    // check and delete old token ??
     const { email } = req.body
     if (!email) console.log('No user email')
     const user = await User.findOne({ email })
     if (user.is_verified) return handleError(res, 'You already verified!')
     await sendEmail(req, user, "verify-email")
-    res.status(200).json(
-        {
-            success: true,
-            message: `A verification email was resent to ${email}`,
-        }
-    )
+    handleSuccessMessage(res, `A verification email was resent to ${email}`)
 }
 
 const resetPassword = async (req, res) => {
@@ -123,23 +80,7 @@ const resetPassword = async (req, res) => {
     const user = await User.findOne({ email })
     if (!user) return handleError(res, 'User with this email is not exist!')
     await sendEmail(req, user, "reset-password")
-    res.status(200).json(
-        {
-            success: true,
-            message: `Check your email ${email} to reset your password!`,
-        }
-    )
-}
-
-const emailMessages = {
-    "verify-email": {
-        subject: "Confirm your email",
-        text: "Your new account was created. Please confirm your data via link:"
-    },
-    "reset-password": {
-        subject: "Reset your password",
-        text: "We received a request to reset your account password. Confirm via link:"
-    }
+    handleSuccessMessage(res, `Check your email ${email} to reset your password!`)
 }
 
 const sendEmail = async (req, user, typeMessage) => {
@@ -149,58 +90,30 @@ const sendEmail = async (req, user, typeMessage) => {
         token: crypto.randomBytes(16).toString("hex"),
         // expire_at: new Date(Date.now() + EXPIRE_TOKEN)
     });
-    console.log('verifyToken', verifyToken)
-
-    // const email = user.email
-    const email = 'laa76881@gmail.com' // email for tests
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        auth: {
-            user: process.env.MAIL_TRANSPORTER_USER,
-            pass: process.env.MAIL_TRANSPORTER_PASS,
-        },
-    });
-
+    const transporter = nodemailer.createTransport(sendMailOptions);
     const link = `http://${req.headers.host}/api/redirects/${typeMessage}/${user._id}/${verifyToken.token}`
 
     await transporter.sendMail({
         from: 'support@test.com',
-        to: email,
-        subject: emailMessages[typeMessage].subject,
-        html:
-            `<h3>Dear user!</h3><p>${emailMessages[typeMessage].text}</p><a href="${link}" target="_blank">${link}</a>`,
-        // attachments: [
-        //     {
-        //         filename: 'greetings.txt',
-        //         content: "Message from file."
-        //     },
-        // ]
+        // to: email, 
+        to: 'laa76881@gmail.com', // email for tests
+        subject: sendMailTypes[typeMessage].subject,
+        html: `<h3>Dear user!</h3><p>${sendMailTypes[typeMessage].text}</p><a href="${link}" target="_blank">${link}</a>`,
     });
 }
 
-const getMe = async (req, res, next) => {
-    console.log('getMe', req.headers.authorization)
-    if (!req.headers.authorization) return res.status(401).send('Token not exist!')
-    jwt.verify(
-        req.headers.authorization.split(' ')[1],
-        process.env.JWT_SECRET,
-        (err, payload) => {
-            if (err) {
-                console.log('getMe err', err)
-                res.status(401).send('Token expired!')
-                next('Token expired!')
-            } else {
-                console.log('getMe payload', payload)
-                User
-                    .findById(payload.id)
-                    .then((user) => res.status(200).json(user))
-                    .catch((error) => handleError(res, error))
-            }
-        }
-    );
+const updatePassword = async (req, res) => {
+    const { token, email, password, password_confirmation } = req.body
+    const userToken = await Token.findOne({ token })
+    if (!userToken) return handleError(res, 'Token expired!')
+    const user = await User.findOne({ email })
+    if (!user) return handleError(res, 'User with this email is not exist!')
+    if (password !== password_confirmation) return handleError(res, 'Passwords not match!', 400)
+    const newPassword = await bcrypt.hash(password, 10)
+    user.password = newPassword
+    await user.save({ password })
+    await userToken.deleteOne()
+    handleSuccessMessage(res, 'Your password has been updated!')
 }
 
 module.exports = {
@@ -208,5 +121,5 @@ module.exports = {
     signUp,
     resendVerification,
     resetPassword,
-    getMe
+    updatePassword
 }

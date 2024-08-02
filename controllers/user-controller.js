@@ -1,21 +1,13 @@
 const User = require("../models/user")
-
-// const handleError = ((res, error) => {
-//     console.log(error)
-//     res.status(500).send(error.message)
-// })
-
-const handleError = ((res, error, status) => {
-    console.log(error)
-    res.status(status ? status : 500).send(error)
-})
+const {
+    handleError
+} = require("../utils/serverMessages")
 
 const getUsers = ((req, res) => {
     User
         .find()
         .sort({ createdAt: -1 })
         .then((users) => {
-            console.log('finish success users')
             res.status(200).json(users)
         })
         .catch((error) => handleError(res, error))

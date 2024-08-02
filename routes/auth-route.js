@@ -6,13 +6,13 @@ const {
     signUp,
     resendVerification,
     resetPassword,
-    getMe
+    updatePassword
 } = require("../controllers/auth-controller")
 
 router.post('/login', logIn)
 router.post('/sign-up', signUp)
 router.post('/resend-verification', resendVerification)
 router.post('/reset-password', resetPassword)
-router.get('/me', getMe)
+router.post('/update-password', updatePassword)
 
 module.exports = router
