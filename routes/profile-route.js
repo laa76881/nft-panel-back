@@ -20,9 +20,11 @@ const {
     updatePassword,
     saveProfile,
     updateAvatar,
+    removeAvatar
 } = require("../controllers/profile-controller")
 
 router.post('/', saveProfile)
 router.post('/password', updatePassword)
 router.post('/avatar', upload.single('avatar'), updateAvatar)
+router.delete('/avatar', removeAvatar)
 module.exports = router
