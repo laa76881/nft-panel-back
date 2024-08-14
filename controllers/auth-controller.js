@@ -8,10 +8,9 @@ const crypto = require("crypto");
 
 const {
     handleError,
-    handleSuccessMessage
+    handleResponse
 } = require("../utils/serverMessages")
 const { sendMailOptions, sendMailTypes } = require("../utils/sendMail")
-
 
 const signUp = async (req, res) => {
     const { last_name, first_name, email, password, password_confirmation } = req.body
@@ -30,7 +29,7 @@ const signUp = async (req, res) => {
     })
     if (!user) handleError(res, 'Error creating user')
     await sendEmail(req, user, "verify-email")
-    handleSuccessMessage(res, `You have successfully registered. A verification email was sent to ${email}`)
+    handleResponse(res, `You have successfully registered. A verification email was sent to ${email}`)
 }
 
 const logIn = async (req, res) => {
@@ -38,7 +37,7 @@ const logIn = async (req, res) => {
     if (!email || !password) return handleError(res, 'Email and password are required!', 400)
     const user = await User.findOne({ email });
     if (!user) return handleError(res, 'User with this email is not exist!', 400)
-    const isMatched = await comparePassword(password, user.password);
+    const isMatched = await user.comparePassword(password, user.password);
     if (!isMatched) return handleError(res, 'Invalid password!', 400)
     if (!user.is_verified)
         return handleError(res, 'Your account has not verified! Please confirm your email!', 400)
@@ -61,17 +60,13 @@ const generateToken = async (user, res) => {
     return token
 }
 
-const comparePassword = async (currentPassword, hashPassword) => {
-    return await bcrypt.compare(currentPassword, hashPassword);
-}
-
 const resendVerification = async (req, res) => {
     const { email } = req.body
     if (!email) console.log('No user email')
     const user = await User.findOne({ email })
     if (user.is_verified) return handleError(res, 'You already verified!')
     await sendEmail(req, user, "verify-email")
-    handleSuccessMessage(res, `A verification email was resent to ${email}`)
+    handleResponse(res, `A verification email was resent to ${email}`)
 }
 
 const resetPassword = async (req, res) => {
@@ -80,7 +75,7 @@ const resetPassword = async (req, res) => {
     const user = await User.findOne({ email })
     if (!user) return handleError(res, 'User with this email is not exist!')
     await sendEmail(req, user, "reset-password")
-    handleSuccessMessage(res, `Check your email ${email} to reset your password!`)
+    handleResponse(res, `Check your email ${email} to reset your password!`)
 }
 
 const sendEmail = async (req, user, typeMessage) => {
@@ -111,9 +106,9 @@ const updatePassword = async (req, res) => {
     if (password !== password_confirmation) return handleError(res, 'Passwords not match!', 400)
     const newPassword = await bcrypt.hash(password, 10)
     user.password = newPassword
-    await user.save({ password })
+    await user.save()
     await userToken.deleteOne()
-    handleSuccessMessage(res, 'Your password has been updated!')
+    handleResponse(res, 'Your password has been updated!')
 }
 
 module.exports = {
