@@ -7,15 +7,19 @@ const pick = require("lodash.pick")
 const userSchema = new Schema({
     first_name: {
         type: String,
-        required: true
+        required: true,
     },
     last_name: {
         type: String,
         required: true
     },
-    email: {
+    full_name: {
         type: String,
         required: true
+    },
+    email: {
+        type: String,
+        required: true,
     },
     is_verified: {
         type: Boolean,
@@ -40,7 +44,7 @@ userSchema.methods.comparePassword = async (currentPassword, hashPassword) => {
 }
 
 userSchema.methods.getUserInfo = (data) => {
-    return pick(data, ["_id", "first_name", "last_name", "email", "role", "avatar"]);
+    return pick(data, ["_id", "first_name", "last_name", "full_name", "email", "role", "avatar"]);
 };
 
 userSchema.methods.checkTest = () => {

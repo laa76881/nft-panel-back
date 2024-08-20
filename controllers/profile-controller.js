@@ -14,6 +14,7 @@ const saveProfile = async (req, res) => {
     if (!user) return res.status(500).send('Error found user')
     user.first_name = first_name
     user.last_name = last_name
+    user.full_name = first_name + ' ' + last_name // move to presave function
     await user.save()
     handleResponse(res, 'Profile has been updated!', user)
 }

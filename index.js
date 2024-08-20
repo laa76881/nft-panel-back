@@ -52,7 +52,7 @@ app.use((req, res, next) => {
 });
 
 const authRoutes = require('./routes/auth-route')
-const userRoutes = require('./routes/user-route')
+const usersRoutes = require('./routes/users-route')
 const redirectRoutes = require('./routes/redirect-route')
 const profileRoutes = require('./routes/profile-route')
 
@@ -62,7 +62,7 @@ mongoose
     .catch((error) => console.log(error))
 
 app.use("/api/auth", authRoutes)
-app.use("/api", userRoutes)
+app.use("/api/users", usersRoutes)
 app.use("/api/redirects", redirectRoutes)
 app.use("/api/profile", profileRoutes)
 

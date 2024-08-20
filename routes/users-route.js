@@ -4,9 +4,9 @@ const router = express.Router()
 const {
     getUsers,
     getUserById,
-} = require("../controllers/user-controller")
+} = require("../controllers/users-controller")
 
-router.get('/users', getUsers)
-router.get('/user/:id', getUserById)
+router.get('/', getUsers)
+router.get('/:id', getUserById)
 
 module.exports = router

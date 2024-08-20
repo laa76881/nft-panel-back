@@ -23,6 +23,7 @@ const signUp = async (req, res) => {
     const user = await User.create({
         first_name,
         last_name,
+        full_name: first_name + ' ' + last_name,
         email,
         password: newPassword,
         role: 0 // user
