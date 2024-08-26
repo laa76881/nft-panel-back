@@ -8,18 +8,24 @@ const userSchema = new Schema({
     first_name: {
         type: String,
         required: true,
+        lowercase: true,
+        // max: 25
     },
     last_name: {
         type: String,
-        required: true
+        required: true,
+        lowercase: true,
     },
     full_name: {
         type: String,
-        required: true
+        required: true,
+        lowercase: true,
     },
     email: {
         type: String,
         required: true,
+        unique: true,
+        lowercase: true
     },
     is_verified: {
         type: Boolean,
@@ -27,7 +33,8 @@ const userSchema = new Schema({
     },
     password: {
         type: String,
-        required: true
+        required: true,
+        // select: false,
     },
     role: {
         type: Number,
@@ -44,11 +51,7 @@ userSchema.methods.comparePassword = async (currentPassword, hashPassword) => {
 }
 
 userSchema.methods.getUserInfo = (data) => {
-    return pick(data, ["_id", "first_name", "last_name", "full_name", "email", "role", "avatar"]);
-};
-
-userSchema.methods.checkTest = () => {
-    console.log('checkTest')
+    return pick(data, ["_id", "first_name", "last_name", "full_name", "email", "role", "avatar", "is_verified", "createdAt"]);
 };
 
 const User = mongoose.model('User', userSchema)

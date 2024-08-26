@@ -7,7 +7,6 @@ const jwt = require("jsonwebtoken");
 const bodyParser = require('body-parser');
 
 const User = require("./models/user")
-
 require('dotenv').config()
 
 const PORT = process.env.PORT
@@ -37,6 +36,7 @@ app.use((req, res, next) => {
                     if (req.url === '/api/auth/me') {
                         const user = await User.findById(app.locals.user_id)
                         if (!user) return res.status(500).send('Error found user')
+                        // console.log('user', user)
                         res.json(user.getUserInfo(user))
                     } else {
                         next()
@@ -51,10 +51,57 @@ app.use((req, res, next) => {
     }
 });
 
+// const WebSocket = require('ws');
+// const wss = new WebSocket.Server({ port: 8080 });
+
+// const channels = {};
+
+// start wss
+// wss.on('connection', (ws) => {
+//   // Join a specific channel
+//   const channel = 'general';
+//   if (!channels[channel]) {
+//     channels[channel] = [];
+//   }
+//   channels[channel].push(ws);
+// //   console.log('channels', channels)
+
+//   let i = 1
+
+// //   channels[channel].forEach((client) => {
+// //     client.send('hello message');
+// //   });
+
+//   setInterval(() => {
+//     channels[channel].forEach((client) => {
+//         // console.log('each', client)
+//         client.send(JSON.stringify({ event: ".store_message", message: `New message - ${i}` }));
+//       });
+//     i++
+//   }, 2000)
+
+//   // Handle incoming messages
+//   ws.on('message', (message) => {
+//     console.log('on message', JSON.parse(message))
+//     // Broadcast message to all clients in the channel
+//     channels[channel].forEach((client) => {
+//       client.send('get it');
+//     });
+//   })
+
+//   // Handle disconnections
+//   ws.on('close', () => {
+//     // Remove client from the channel
+//     channels[channel] = channels[channel].filter((client) => client !== ws);
+//   });
+// });
+// close wss
+
 const authRoutes = require('./routes/auth-route')
 const usersRoutes = require('./routes/users-route')
 const redirectRoutes = require('./routes/redirect-route')
 const profileRoutes = require('./routes/profile-route')
+const chatsRoutes = require('./routes/chats-route')
 
 mongoose
     .connect(db)
@@ -65,6 +112,7 @@ app.use("/api/auth", authRoutes)
 app.use("/api/users", usersRoutes)
 app.use("/api/redirects", redirectRoutes)
 app.use("/api/profile", profileRoutes)
+app.use("/api/chats", chatsRoutes)
 
 app.listen(PORT, (error) => {
     error ? error : console.log(`listening port ${PORT}`)

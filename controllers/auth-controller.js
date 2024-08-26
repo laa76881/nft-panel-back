@@ -14,7 +14,6 @@ const { sendMailOptions, sendMailTypes } = require("../utils/sendMail")
 
 const signUp = async (req, res) => {
     const { last_name, first_name, email, password, password_confirmation } = req.body
-
     const userExist = await User.findOne({ email })
     if (userExist) return handleError(res, 'This email already exist!', 400)
     if (password !== password_confirmation) return handleError(res, 'Passwords not match!', 400)
