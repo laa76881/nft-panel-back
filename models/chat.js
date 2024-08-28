@@ -18,10 +18,10 @@ const chatSchema = new Schema({
         type: Number,
         default: 0 // general
     },
-    last_message: {
-        type: String,
-        default: ''
-    }
+    // last_message: {
+    //     type: String,
+    //     default: ''
+    // },
 }, { timestamps: true })
 
 // chatSchema.methods.getMainInfo = (data) => {

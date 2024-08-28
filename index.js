@@ -5,9 +5,13 @@ const mongoose = require('mongoose')
 const cors = require('cors');
 const jwt = require("jsonwebtoken");
 const bodyParser = require('body-parser');
-
 const User = require("./models/user")
+
+const Server = require('socket.io').Server
+const { handleSocketConnection } = require("./utils/socketChat")
+
 require('dotenv').config()
+
 
 const PORT = process.env.PORT
 const db = `mongodb+srv://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASS}@${process.env.MONGO_URL}`
@@ -51,52 +55,6 @@ app.use((req, res, next) => {
     }
 });
 
-// const WebSocket = require('ws');
-// const wss = new WebSocket.Server({ port: 8080 });
-
-// const channels = {};
-
-// start wss
-// wss.on('connection', (ws) => {
-//   // Join a specific channel
-//   const channel = 'general';
-//   if (!channels[channel]) {
-//     channels[channel] = [];
-//   }
-//   channels[channel].push(ws);
-// //   console.log('channels', channels)
-
-//   let i = 1
-
-// //   channels[channel].forEach((client) => {
-// //     client.send('hello message');
-// //   });
-
-//   setInterval(() => {
-//     channels[channel].forEach((client) => {
-//         // console.log('each', client)
-//         client.send(JSON.stringify({ event: ".store_message", message: `New message - ${i}` }));
-//       });
-//     i++
-//   }, 2000)
-
-//   // Handle incoming messages
-//   ws.on('message', (message) => {
-//     console.log('on message', JSON.parse(message))
-//     // Broadcast message to all clients in the channel
-//     channels[channel].forEach((client) => {
-//       client.send('get it');
-//     });
-//   })
-
-//   // Handle disconnections
-//   ws.on('close', () => {
-//     // Remove client from the channel
-//     channels[channel] = channels[channel].filter((client) => client !== ws);
-//   });
-// });
-// close wss
-
 const authRoutes = require('./routes/auth-route')
 const usersRoutes = require('./routes/users-route')
 const redirectRoutes = require('./routes/redirect-route')
@@ -114,6 +72,15 @@ app.use("/api/redirects", redirectRoutes)
 app.use("/api/profile", profileRoutes)
 app.use("/api/chats", chatsRoutes)
 
-app.listen(PORT, (error) => {
+const expressServer = app.listen(PORT, (error) => {
     error ? error : console.log(`listening port ${PORT}`)
 })
+
+const io = new Server(expressServer, {
+    path: `/app/${process.env.SOCKET_KEY}`,
+    cors: {
+        origin: process.env.NODE_ENV === "production" ? false : ["http://localhost:5500", "http://127.0.0.1:8080", "http://127.0.0.1:8081"]
+    }
+})
+
+io.on('connection', socket => handleSocketConnection(io, socket, app.locals.user_id))

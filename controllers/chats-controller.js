@@ -1,5 +1,6 @@
 const Chat = require("../models/chat")
 const User = require("../models/user")
+const Message = require("../models/message")
 
 const {
     handleError
@@ -99,7 +100,6 @@ const initChat = (async (req, res) => {
     const chatExist = await Chat.find(searchOptions)
     console.log('check chats', chatExist)
     if (chatExist[0]) return res.status(200).json(chatExist[0])
-    console.log('else create')
     const chat = await Chat.create({
         to_id,
         from_id
@@ -108,8 +108,27 @@ const initChat = (async (req, res) => {
     res.status(200).json(chat)
 })
 
+const sendMessage = (async (req, res) => {
+    const { message } = req.body
+    console.log('message', message)
+    console.log('params', req.params)
+    const from_id = req.app.locals.user_id
+
+    // const chatExist = await Chat.find(searchOptions)
+    // console.log('check chats', chatExist)
+    // if (chatExist[0]) return res.status(200).json(chatExist[0])
+    const newMessage = await Message.create({
+        message,
+        chat_id: req.params.id,
+        from_id
+    })
+    console.log('created message', newMessage)
+    res.status(200).json(newMessage)
+})
+
 module.exports = {
     getChats,
     getChatById,
-    initChat
+    initChat,
+    sendMessage
 }
