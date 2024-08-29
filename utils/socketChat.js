@@ -1,6 +1,10 @@
-const Chat = require("../models/chat")
+// const Chat = require("../models/chat")
+const {
+    updateChat
+} = require("../controllers/chats-controller")
 
 const handleSocketConnection = ((io, socket, user_id) => {
+    let active_chat;
     // const token = socket.handshake.auth.token
     // console.log('token', token)
     // jwt.verify(
@@ -25,13 +29,17 @@ const handleSocketConnection = ((io, socket, user_id) => {
 
     // Listening for a message event 
     socket.on('message', data => {
-        console.log('on message', data)
         io.emit('message', data)
+        active_chat = {
+            id: data.chat_id,
+            message: data.message
+        }
     })
 
     // When user disconnects - to all others 
     socket.on('disconnect', () => {
-        console.log('disconnect')
+        // console.log('disconnect', active_chat)
+        if (active_chat) updateChat({ data: active_chat })
         socket.broadcast.emit('disconnected', `User ${socket.id.substring(0, 5)}} disconnected`)
     })
 

@@ -12,7 +12,7 @@ const getChats = (async (req, res) => {
     // const page = parseInt(req.query.page) || 1;
     // const per_page = parseInt(req.query.per_page) || 10;
     // const search = req.query.search || ''
-    const sorting = { [req.query.sort_field || 'createdAt']: +req.query.sort_direction || -1 }
+    const sorting = { [req.query.sort_field || 'updatedAt']: +req.query.sort_direction || -1 }
     // const startIndex = (page - 1) * per_page;
     const searchOptions = {
         $or: [
@@ -48,13 +48,16 @@ const filterChats = async (user_id, data) => {
     for (const chat of data) {
         const from_id = chat.to_id === user_id ? chat.from_id : chat.to_id
         const from = await User.findById(from_id)
+        // const last_message = await Message.findOne({ chat_id: chat._id }, {}, { sort: { 'createdAt': -1 } })
         newChats.push({
             _id: chat._id,
             type: chat.type,
             createdAt: chat.createdAt,
             updatedAt: chat.updatedAt,
+            message: chat.message ? chat.message : "",
             // from_id,
             // to_id: user_id,
+            // last_message: chat.messages.length ? chat.messages[chat.messages.length - 1]?.message : '',
             from: from.getUserInfo(from)
         })
     }
@@ -70,7 +73,7 @@ const getChatById = ((req, res) => {
             if (chat.to_id !== user_id && chat.from_id !== user_id) return handleError(res, 'Chat not found!')
             const chats = await filterChats(user_id, [chat])
             const activeChat = chats[0]
-            console.log('activeChat', activeChat)
+            // console.log('activeChat', activeChat)
             res.status(200).json(activeChat)
         })
         .catch((error) => handleError(res, error))
@@ -98,7 +101,7 @@ const initChat = (async (req, res) => {
     }
 
     const chatExist = await Chat.find(searchOptions)
-    console.log('check chats', chatExist)
+    // console.log('check chats', chatExist)
     if (chatExist[0]) return res.status(200).json(chatExist[0])
     const chat = await Chat.create({
         to_id,
@@ -108,21 +111,54 @@ const initChat = (async (req, res) => {
     res.status(200).json(chat)
 })
 
+const updateChat = (async ({ data }) => {
+    console.log('check update', data)
+    const chat = await Chat.findById(data.id)
+    console.log('find chat', chat)
+    if (!chat) return
+    chat.message = data.message
+    console.log('new chat', chat)
+    await chat.save()
+    // res.status(200).send('ok')
+})
+
+const getMessages = (async (req, res) => {
+    // Chat
+    //     .findById(req.params.id)
+    //     .then((chat) => {
+    //         res.status(200).json(chat?.messages)
+    //     })
+    //     .catch((error) => handleError(res, error))
+
+    Message
+        .find({
+            chat_id: req.params.id
+        })
+        .then((messages) => {
+            // console.log('get messages', messages)
+            res.status(200).json(messages)
+        })
+        .catch((error) => handleError(res, error))
+})
+
 const sendMessage = (async (req, res) => {
     const { message } = req.body
-    console.log('message', message)
-    console.log('params', req.params)
     const from_id = req.app.locals.user_id
 
-    // const chatExist = await Chat.find(searchOptions)
-    // console.log('check chats', chatExist)
-    // if (chatExist[0]) return res.status(200).json(chatExist[0])
+    // const newMessage = {
+    //     message,
+    //     from_id
+    // }
+    // const chat = await Chat.findById(req.params.id)
+    // chat.messages.push(newMessage)
+    // await chat.save()
+
     const newMessage = await Message.create({
         message,
         chat_id: req.params.id,
         from_id
     })
-    console.log('created message', newMessage)
+    // console.log('created message', newMessage)
     res.status(200).json(newMessage)
 })
 
@@ -130,5 +166,7 @@ module.exports = {
     getChats,
     getChatById,
     initChat,
+    updateChat,
+    getMessages,
     sendMessage
 }

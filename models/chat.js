@@ -18,10 +18,28 @@ const chatSchema = new Schema({
         type: Number,
         default: 0 // general
     },
-    // last_message: {
-    //     type: String,
-    //     default: ''
-    // },
+    message: {
+        type: String,
+        default: ""
+    },
+    is_unread: {
+        type: Boolean,
+        default: true
+    }
+    // messages: [{
+    //     from_id: {
+    //         type: String,
+    //         required: true
+    //     },
+    //     message: {
+    //         type: String,
+    //         required: true
+    //     },
+    //     createdAt: { 
+    //         type: Date, 
+    //         default: Date.now() 
+    //     },
+    // }],
 }, { timestamps: true })
 
 // chatSchema.methods.getMainInfo = (data) => {
