@@ -1,7 +1,6 @@
 const Chat = require("../models/chat")
 const User = require("../models/user")
 const Message = require("../models/message")
-
 const {
     handleError
 } = require("../utils/serverMessages")
@@ -73,7 +72,6 @@ const getChatById = ((req, res) => {
             if (chat.to_id !== user_id && chat.from_id !== user_id) return handleError(res, 'Chat not found!')
             const chats = await filterChats(user_id, [chat])
             const activeChat = chats[0]
-            // console.log('activeChat', activeChat)
             res.status(200).json(activeChat)
         })
         .catch((error) => handleError(res, error))
@@ -111,31 +109,29 @@ const initChat = (async (req, res) => {
     res.status(200).json(chat)
 })
 
-const updateChat = (async ({ data }) => {
-    console.log('check update', data)
-    const chat = await Chat.findById(data.id)
-    console.log('find chat', chat)
+const updateChat = (async (message) => {
+    console.log('check update', message)
+    const chat = await Chat.findById(message?.chat_id)
     if (!chat) return
-    chat.message = data.message
-    console.log('new chat', chat)
+    chat.message = message
     await chat.save()
-    // res.status(200).send('ok')
 })
 
 const getMessages = (async (req, res) => {
-    // Chat
-    //     .findById(req.params.id)
-    //     .then((chat) => {
-    //         res.status(200).json(chat?.messages)
-    //     })
-    //     .catch((error) => handleError(res, error))
+    const page = parseInt(req.query.page) || 1;
+    const per_page = parseInt(req.query.per_page) || 10;
+    // const search = req.query.search || ''
+    const startIndex = (page - 1) * per_page;
 
     Message
         .find({
-            chat_id: req.params.id
+            chat_id: req.params.id,
+            // createdAt: { $lte: req.createdAtBefore }
         })
+        .sort('-createdAt')
+        .skip(startIndex)
+        .limit(per_page)
         .then((messages) => {
-            // console.log('get messages', messages)
             res.status(200).json(messages)
         })
         .catch((error) => handleError(res, error))

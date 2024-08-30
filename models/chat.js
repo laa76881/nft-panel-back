@@ -19,8 +19,8 @@ const chatSchema = new Schema({
         default: 0 // general
     },
     message: {
-        type: String,
-        default: ""
+        type: Object,
+        default: {}
     },
     is_unread: {
         type: Boolean,
