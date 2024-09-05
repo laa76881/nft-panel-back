@@ -33,6 +33,7 @@ const updatePassword = async (req, res) => {
 }
 
 const updateAvatar = async (req, res) => {
+    // console.log('updateAvatar', req.file)
     const user = await User.findById(req.app.locals.user_id)
     const currentAvatarPath = user.avatar ? user.avatar.replace(`http://${req.headers.host}`, './public') : null
     if (!req.file) return handleError(res, 'No such file or directory!', 500)

@@ -14,6 +14,17 @@ const messageSchema = new Schema({
         required: true,
         references: { model: "users", key: "_id" }
     },
+    attachment: {
+        path: {
+            type: String,
+            // required: true
+        },
+        size: {
+            type: Number,
+            // required: true
+        },
+        // default: null
+    },
     message: {
         type: String,
         required: true,

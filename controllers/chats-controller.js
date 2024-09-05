@@ -5,6 +5,9 @@ const {
     handleError
 } = require("../utils/serverMessages")
 
+const fs = require('fs')
+const http = require('http');
+
 const getChats = (async (req, res) => {
     console.log('req params', req.query)
     const user_id = req.app.locals.user_id
@@ -138,25 +141,47 @@ const getMessages = (async (req, res) => {
 })
 
 const sendMessage = (async (req, res) => {
-    const { message } = req.body
-    const from_id = req.app.locals.user_id
+    console.log('send message', req.body, req.file)
+    const file = req.file
+    const message = file ? file.originalname : req.body.message
+    console.log('send mess file', file)
+    console.log('send mess texxt', message)
 
-    // const newMessage = {
-    //     message,
-    //     from_id
-    // }
-    // const chat = await Chat.findById(req.params.id)
-    // chat.messages.push(newMessage)
-    // await chat.save()
+    // if (file) return downloadFile(file)
+    const from_id = req.app.locals.user_id
 
     const newMessage = await Message.create({
         message,
+        attachment: !file ? null : {
+            path: `http://${req.headers.host}/${file.path.split("public/")[1]}`,
+            size: file.size
+        },
         chat_id: req.params.id,
         from_id
     })
-    // console.log('created message', newMessage)
+    console.log('created message', newMessage)
     res.status(200).json(newMessage)
 })
+
+// const downloadFile = (async (req, res) => {
+//     const fileUrl = 'http://localhost:3000/uploads/img-1724161643211.jpg';
+//     const destination = 'downloaded_file.jpg';
+
+//     const file = fs.createWriteStream(destination);
+
+//     http.get(fileUrl, (response) => {
+//         response.pipe(file);
+//         file.on('finish', () => {
+//             file.close(() => {
+//                 console.log('File downloaded successfully');
+//             });
+//         });
+//     }).on('error', (err) => {
+//         fs.unlink(destination, () => {
+//             console.error('Error downloading file:', err);
+//         });
+//     });
+// })
 
 module.exports = {
     getChats,
